@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glass Cracking Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        header, footer {
+            background-color: #007bff;
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        .container {
+            text-align: center;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            max-width: 90%;
+            width: 500px;
+            animation: float 2s infinite ease-in-out;
+        }
+
+        .input-section {
+            margin-bottom: 20px;
+        }
+
+        .input-section input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            width: calc(100% - 200px);
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            margin-right: 10px;
+            box-sizing: border-box;
+        }
+
+        .input-section input[type="file"] {
+            display: none;
+        }
+
+        .input-section label,
+        .input-section button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px 0;
+            display: inline-block;
+        }
+
+        .input-section button:hover,
+        .input-section label:hover {
+            background-color: #0056b3;
+        }
+
+        .glass-area {
+            position: relative;
+            border: 2px solid #000;
+            padding: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            display: none;
+            user-select: none;
+            border-radius: 10px;
+            background-color: #e0e0e0;
+            transition: transform 0.2s ease-in-out;
+            overflow: hidden;
+            height: 300px; /* Increased height */
+            text-align: center;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .glass-area img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .scratch {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .game-over {
+            display: none;
+            margin-top: 20px;
+            font-size: 24px;
+            color: red;
+        }
+
+        .cracked {
+            opacity: 1 !important;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @keyframes hammer-hit {
+            0% { transform: translateY(-150px) scale(1); opacity: 0; }
+            50% { transform: translateY(0) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-150px) scale(1); opacity: 0; }
+        }
+
+        .hammer {
+            position: absolute;
+            bottom: -150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 250px;
+            background-color: #8b4513; /* Handle color */
+            animation: hammer-hit 1s ease-in-out;
+        }
+
+        .hammer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 60px;
+            background-color: #000;
+            border-radius: 10px 10px 0 0;
+        }
+
+        #beatButton {
+            display: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        #beatButton:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Anger Management Purpose
+    </header>
+    <div class="container">
+        <h1>Glass Cracking Game</h1>
+        <div class="input-section">
+            <label for="fileInput">Upload Photo</label>
+            <input type="file" id="fileInput" accept="image/*" onchange="submitImage()">
+            <input type="text" id="userInput" placeholder="Write something...">
+            <button onclick="submitText()">Submit</button>
+        </div>
+        <button id="beatButton" onclick="beatGlass()">Beat</button>
+        <div id="glassArea" class="glass-area">
+            <!-- Posted text or image will appear here -->
+            <div class="scratch" id="scratchEffect"></div>
+        </div>
+        <div id="gameOver" class="game-over">
+            Game Over! The glass is broken.
+        </div>
+        <audio id="crackSound" src="https://drive.google.com/uc?export=view&id=1lE7bv9edxAalP_3IDnYIFAnTQe-f-gBu"></audio>
+        <audio id="beatSound" src="https://drive.google.com/uc?export=view&id=1lE7bv9edxAalP_3IDnYIFAnTQe-f-gBu"></audio>
+    </div>
+    <footer>
+        Created by Shahadat Hossain Shuvo <a href="https://instagram.com/dshinba">@dshinba</a>
+    </footer>
+    <script>
+        let clickCount = 0;
+        const maxClicks = 30;
+
+        function submitText() {
+            const userInput = document.getElementById('userInput').value;
+            if (userInput.trim() === '') {
+                alert('Please write something.');
+                return;
+            }
+
+            const glassArea = document.getElementById('glassArea');
+            glassArea.innerHTML = `<span>${userInput}</span><canvas class="scratch" id="scratchEffect"></canvas>`;
+            glassArea.style.display = 'flex';
+            document.getElementById('beatButton').style.display = 'inline-block';
+            clickCount = 0;
+            document.getElementById('gameOver').style.display = 'none';
+            glassArea.classList.remove('cracked');
+            glassArea.style.transform = 'scale(1)';
+        }
+
+        function submitImage() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const glassArea = document.getElementById('glassArea');
+                    glassArea.innerHTML = `<img src="${e.target.result}" alt="Uploaded Image"><canvas class="scratch" id="scratchEffect"></canvas>`;
+                    glassArea.style.display = 'flex';
+                    document.getElementById('beatButton').style.display = 'inline-block';
+                    clickCount = 0;
+                    document.getElementById('gameOver').style.display = 'none';
+                    glassArea.classList.remove('cracked');
+                    glassArea.style.transform = 'scale(1)';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        document.getElementById('glassArea').addEventListener('click', () => {
+            handleCrack();
+        });
+
+        function beatGlass() {
+            const glassArea = document.getElementById('glassArea');
+            if (glassArea.style.display !== 'flex') return;
+
+            const hammer = document.createElement('div');
+            hammer.classList.add('hammer');
+            glassArea.appendChild(hammer);
+
+            const beatSound = document.getElementById('beatSound');
+            beatSound.play();
+
+            setTimeout(() => {
+                glassArea.removeChild(hammer);
+            }, 1000);
+
+            handleCrack();
+        }
+
+        function handleCrack() {
+            clickCount++;
+            const glassArea = document.getElementById('glassArea');
+            const crackSound = document.getElementById('crackSound');
+            const scratchEffect = document.getElementById('scratchEffect');
+
+            if (!crackSound.paused) {
+                crackSound.pause();
+                crackSound.currentTime = 0;
+            }
+            crackSound.play();
+
+            createCrackEffect(scratchEffect);
+
+            glassArea.style.background = `rgba(255, 0, 0, ${clickCount / maxClicks * 0.1})`;
+            glassArea.style.transform = `scale(${1 + clickCount / maxClicks * 0.1}) rotate(${Math.random() * 10 - 5}deg)`;
+
+            if (clickCount >= maxClicks) {
+                document.getElementById('gameOver').style.display = 'block';
+                glassArea.style.display = 'none';
+            } else if (clickCount >= maxClicks / 2) {
+                glassArea.classList.add('cracked');
+            }
+        }
+
+        function createCrackEffect(element) {
+            const ctx = element.getContext('2d');
+            const canvas = ctx.canvas;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.width = element.clientWidth;
+            canvas.height = element.clientHeight;
+
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 2;
+
+            function drawCrack(x, y, length, angle, depth) {
+                if (depth === 0) return;
+
+                const xEnd = x + length * Math.cos(angle);
+                const yEnd = y + length * Math.sin(angle);
+
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(xEnd, yEnd);
+                ctx.stroke();
+
+                const newLength = length * 0.7;
+                const angleVariance = Math.PI / 4;
+                
+                drawCrack(xEnd, yEnd, newLength, angle + angleVariance, depth - 1);
+                drawCrack(xEnd, yEnd, newLength, angle - angleVariance, depth - 1);
+            }
+
+            const cracks = Math.floor(clickCount / maxClicks * 10);
+            for (let i = 0; i < cracks; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const length = Math.random() * 50 + 50;
+                const angle = Math.random() * 2 * Math.PI;
+                drawCrack(x, y, length, angle, 5);
+            }
+
+            element.style.opacity = `${clickCount / maxClicks}`;
+        }
+    </script>
+</body>
+</html>
